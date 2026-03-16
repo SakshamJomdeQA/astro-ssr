@@ -32,6 +32,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   response.headers.set("X-Response-Time", `${Date.now() - startTime}ms`);
   response.headers.set("X-Powered-By", "Astro on Contentstack Launch");
 
+  // Cache-Control: CDN caches for 1 year; browsers must revalidate on every request
+  response.headers.set(
+    "Cache-Control",
+    "public, max-age=0, s-maxage=31536000, must-revalidate"
+  );
+
   // Log to console (visible in Launch's log stream)
   const method = context.request.method;
   const path = context.url.pathname;
