@@ -23,9 +23,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
   response.headers.set("X-Request-ID", requestId);
   response.headers.set("X-Response-Time", `${Date.now() - startTime}ms`);
   response.headers.set("X-Powered-By", "Astro on Contentstack Launch");
+
+  // Cache-Control applied to every page and route:
+  //   API routes  → no-store  (always fresh, never cached)
+  //   All pages   → browser caches 1 hour, CDN caches 1 year
+  const isApiRoute = context.url.pathname.startsWith("/api/");
   response.headers.set(
     "Cache-Control",
-    "public, max-age=0, s-maxage=31536000, must-revalidate"
+    isApiRoute
+      ? "no-store"
+      : "public, max-age=3600, s-maxage=31536000, must-revalidate"
   );
 
   // Visible in Contentstack Launch's log stream
