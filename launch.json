@@ -1,13 +1,13 @@
 {
   "redirects": [
     {
-      "source": "/blog/:slug",
-      "destination": "/news/:slug",
+      "source": "/articles/:slug",
+      "destination": "/blog/:slug",
       "statusCode": 308
     },
     {
-      "source": "/blogs/:category(product-updates|announcements)/:postId(.*)",
-      "destination": "/product-updates/:postId",
+      "source": "/user/:id",
+      "destination": "/ssr/user/:id",
       "statusCode": 301
     },
     {
