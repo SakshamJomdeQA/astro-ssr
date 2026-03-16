@@ -11,11 +11,6 @@
       "statusCode": 301
     },
     {
-      "source": "/blog/post",
-      "destination": "https://example.com/news/page",
-      "statusCode": 308
-    },
-    {
       "source": "/old-home",
       "destination": "/",
       "statusCode": 301,
@@ -30,24 +25,6 @@
     {
       "source": "/blog/:slug/:postId",
       "destination": "/wp/pages/blogs/:postId"
-    },
-    {
-      "source": "/assets/:category(products|storefront)/:path(.*)",
-      "destination": "https://example.com/assets/:path",
-      "response": {
-        "headers": {
-          "x-robots-tag": "noindex"
-        }
-      }
-    },
-    {
-      "source": "/:path((?!blogs|docs|about-us).+)",
-      "destination": "https://example.com/:path",
-      "request": {
-        "headers": {
-          "x-api-key": "your-api-key-here"
-        }
-      }
     },
     {
       "source": "/:path(.*)",
