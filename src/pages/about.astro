@@ -1,0 +1,80 @@
+---
+// SSG — statically generated
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="About" description="Learn about this Astro Feature Showcase project and how it demonstrates Astro's rendering modes on Contentstack Launch.">
+  <div class="container" style="max-width: 800px; padding: 4rem 1.5rem;">
+    <div class="page-header" style="text-align: left; padding: 2rem 0 3rem;">
+      <div class="badge badge-ssg mb-2">⚡ SSG Page</div>
+      <h1 style="color: #fff; margin: 1rem 0;">About This Project</h1>
+      <p style="color: var(--color-text-muted); font-size: 1.1rem; max-width: 60ch;">
+        A hands-on showcase of every major Astro v5 feature, built specifically for deployment on Contentstack Launch.
+      </p>
+    </div>
+
+    <div class="prose">
+      <h2>What is this?</h2>
+      <p>
+        This project is a <strong>comprehensive Astro application</strong> designed to demonstrate and test every major feature
+        of the Astro web framework in a real production environment on Contentstack Launch.
+      </p>
+
+      <h2>Features Covered</h2>
+      <ul>
+        <li><strong>Static Site Generation (SSG)</strong> — Build-time rendering for maximum performance</li>
+        <li><strong>Server-Side Rendering (SSR)</strong> — Per-request rendering for dynamic, personalized content</li>
+        <li><strong>Hybrid Mode</strong> — Mix SSG and SSR in the same project using <code>output: "hybrid"</code></li>
+        <li><strong>Islands Architecture</strong> — Isolated React components with partial hydration directives</li>
+        <li><strong>Content Collections</strong> — Type-safe Markdown/MDX content with Zod schema validation</li>
+        <li><strong>API Routes</strong> — File-based REST endpoints (GET, POST, PUT, DELETE)</li>
+        <li><strong>Middleware</strong> — Per-request interceptors for logging, auth, and injecting locals</li>
+        <li><strong>View Transitions</strong> — Native browser page transition animations</li>
+        <li><strong>Image Optimization</strong> — Built-in <code>&lt;Image&gt;</code> component with lazy loading</li>
+        <li><strong>Sitemap Generation</strong> — Auto-generated <code>sitemap-index.xml</code> via <code>@astrojs/sitemap</code></li>
+        <li><strong>MDX</strong> — Embed React components inside Markdown content</li>
+        <li><strong>TypeScript</strong> — End-to-end type safety with strict config</li>
+      </ul>
+
+      <h2>Tech Stack</h2>
+      <ul>
+        <li><strong>Framework:</strong> <a href="https://astro.build" target="_blank">Astro v5</a></li>
+        <li><strong>Adapter:</strong> <code>@astrojs/node</code> (standalone mode)</li>
+        <li><strong>UI Framework:</strong> React 19 (for Islands)</li>
+        <li><strong>Content:</strong> Markdown + MDX via <code>@astrojs/mdx</code></li>
+        <li><strong>Hosting:</strong> <a href="https://www.contentstack.com/products/launch" target="_blank">Contentstack Launch</a></li>
+      </ul>
+
+      <h2>Rendering Strategy</h2>
+      <p>
+        The project uses <code>output: "hybrid"</code> which makes all pages SSG by default.
+        Pages that need server-side data add <code>export const prerender = false</code> to opt into SSR.
+        API routes are always SSR.
+      </p>
+
+      <h2>Deployment</h2>
+      <p>
+        This app is deployed on <strong>Contentstack Launch</strong>, a Git-connected hosting platform.
+        The <code>@astrojs/node</code> adapter in standalone mode produces a self-contained Node.js server at
+        <code>dist/server/entry.mjs</code> which Launch runs via the <code>npm start</code> command.
+      </p>
+
+      <h2>Project Structure</h2>
+      <pre>
+src/
+├── components/     # Reusable Astro + React components
+├── content/
+│   ├── config.ts   # Zod collection schemas
+│   └── blog/       # Markdown & MDX posts
+├── layouts/        # Page layouts with ViewTransitions
+├── middleware/     # Astro middleware (logging, locals)
+├── pages/
+│   ├── api/        # API routes (SSR endpoints)
+│   ├── blog/       # Blog pages (SSG)
+│   ├── ssr/        # SSR demo pages
+│   └── ...         # Other pages
+└── styles/         # Global CSS
+      </pre>
+    </div>
+  </div>
+</Layout>

@@ -1,0 +1,27 @@
+{
+  "name": "astro-feature-showcase",
+  "version": "1.0.0",
+  "description": "A comprehensive Astro app showcasing SSR, SSG, Islands, Content Collections, API Routes, Middleware, and more — ready for Contentstack Launch.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node dist/server/entry.mjs",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.3.0",
+    "@astrojs/node": "^9.2.2",
+    "@astrojs/react": "^4.2.1",
+    "@astrojs/sitemap": "^3.3.0",
+    "astro": "^5.5.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.0.0"
+  }
+}

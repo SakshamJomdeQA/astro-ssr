@@ -1,0 +1,103 @@
+---
+// SSR dynamic route — NOT pre-rendered; [id] is resolved at request time
+export const prerender = false;
+
+import Layout from "../../../layouts/Layout.astro";
+
+const { id } = Astro.params;
+
+// Simulate a "database lookup" (replace with real CMS/DB call)
+const mockUsers: Record<string, { name: string; role: string; joined: string; avatar: string }> = {
+  "astro-dev": { name: "Astro Developer", role: "Core Contributor", joined: "2023-01-15", avatar: "🧑‍💻" },
+  "launch-user": { name: "Launch User", role: "Platform Admin", joined: "2024-03-01", avatar: "🚀" },
+  "42": { name: "Douglas Adams", role: "Philosopher", joined: "1979-10-12", avatar: "📖" },
+  "contentstack": { name: "Contentstack Team", role: "Platform Provider", joined: "2012-05-20", avatar: "🏢" },
+};
+
+const user = mockUsers[id ?? ""] ?? null;
+const serverTime = new Date().toISOString();
+const { requestId } = Astro.locals;
+---
+
+<Layout
+  title={user ? `User: ${user.name}` : "User Not Found"}
+  description={`Dynamic SSR route for user ID: ${id}`}
+>
+  <div class="container" style="padding: 4rem 1.5rem 5rem; max-width: 700px;">
+    <a href="/ssr" style="display: inline-flex; align-items: center; gap: 0.4rem; color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 2rem; transition: color 0.2s;">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      Back to SSR Demo
+    </a>
+
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2rem;">
+      <span class="badge badge-ssr">🖥️ Dynamic SSR Route</span>
+      <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--color-accent); border-color: rgba(6,182,212,0.3);">
+        /ssr/user/[id]
+      </span>
+    </div>
+
+    {user ? (
+      <div>
+        <div class="card" style="margin-bottom: 1.5rem; border-color: rgba(124,58,237,0.3);">
+          <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+            <div style="font-size: 4rem; line-height: 1;">{user.avatar}</div>
+            <div>
+              <h1 style="font-size: 1.75rem; color: #fff; margin-bottom: 0.25rem;">{user.name}</h1>
+              <div style="color: var(--color-primary-light); font-weight: 600; margin-bottom: 0.5rem;">{user.role}</div>
+              <div style="color: var(--color-text-muted); font-size: 0.85rem;">
+                Member since {new Date(user.joined).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="gap: 1rem;">
+          <div class="card">
+            <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem;">Route Param</div>
+            <code style="font-size: 1.1rem; color: var(--color-accent-light);">id = "{id}"</code>
+          </div>
+          <div class="card">
+            <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem;">Rendered At</div>
+            <code style="font-size: 0.8rem; word-break: break-all;">{serverTime}</code>
+          </div>
+          <div class="card">
+            <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem;">Request ID</div>
+            <code style="font-size: 0.78rem;">{requestId.slice(0, 18)}…</code>
+          </div>
+          <div class="card">
+            <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem;">Mode</div>
+            <span style="color: var(--color-primary-light); font-weight: 700;">Server-Side Rendered</span>
+          </div>
+        </div>
+
+        <div class="card mt-3" style="margin-top: 1.5rem; background: rgba(124,58,237,0.04); border-color: rgba(124,58,237,0.2);">
+          <p style="color: var(--color-text-muted); font-size: 0.875rem; margin: 0;">
+            💡 This page is rendered <strong>per request</strong> on the server. The <code>[id]</code> segment
+            in the URL is resolved at runtime via <code>Astro.params.id</code>. In a real app, you'd query your
+            database or CMS here. Notice the <strong>Rendered At</strong> timestamp above changes on every page load.
+          </p>
+        </div>
+      </div>
+    ) : (
+      <div style="text-align: center; padding: 4rem 2rem;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
+        <h1 style="color: #fff; margin-bottom: 0.75rem;">User Not Found</h1>
+        <p style="color: var(--color-text-muted); margin-bottom: 2rem;">
+          No user found for ID: <code>"{id}"</code>
+        </p>
+        <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 2rem;">
+          Try one of these:
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center;">
+          {["astro-dev", "launch-user", "42", "contentstack"].map(uid => (
+            <a href={`/ssr/user/${uid}`} class="btn btn-outline" style="font-size: 0.85rem;">
+              /ssr/user/{uid}
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</Layout>

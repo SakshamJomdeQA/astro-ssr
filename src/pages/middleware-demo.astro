@@ -1,0 +1,156 @@
+---
+// SSR — reads Astro.locals populated by middleware
+export const prerender = false;
+
+import Layout from "../layouts/Layout.astro";
+
+const { requestId, startTime, visitorIp, theme, isAuthenticated } = Astro.locals;
+
+// Compute server processing time for this page
+const pageRenderStart = Date.now();
+const middlewareDuration = pageRenderStart - startTime;
+
+const serverTime = new Date().toISOString();
+
+// Collect all request headers (excluding sensitive ones)
+const headers: Record<string, string> = {};
+Astro.request.headers.forEach((value, key) => {
+  if (!["cookie", "authorization"].includes(key.toLowerCase())) {
+    headers[key] = value;
+  }
+});
+---
+
+<Layout title="Middleware Demo" description="See Astro middleware in action — request interception, logging, locals injection, and response headers.">
+  <div class="container" style="padding: 4rem 1.5rem 5rem; max-width: 900px;">
+    <!-- Header -->
+    <div style="margin-bottom: 3rem;">
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+        <span class="badge badge-ssr">🔒 Middleware</span>
+        <span class="badge badge-ssr">🖥️ SSR Page</span>
+      </div>
+      <h1 style="color: #fff; margin-bottom: 1rem;">Middleware Demo</h1>
+      <p style="color: var(--color-text-muted); font-size: 1.05rem; max-width: 65ch;">
+        Astro middleware (<code>src/middleware/index.ts</code>) intercepts every request before it reaches the page.
+        All the data below was injected into <code>Astro.locals</code> by the middleware.
+      </p>
+    </div>
+
+    <!-- Locals showcase -->
+    <h2 style="color: #fff; font-size: 1.15rem; margin-bottom: 1.25rem;">🔑 Middleware-Injected Locals</h2>
+    <div class="grid-2" style="margin-bottom: 2.5rem;">
+      <div class="card" style="border-color: rgba(124,58,237,0.3);">
+        <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">Request ID</div>
+        <code style="font-size: 0.85rem; word-break: break-all; color: var(--color-primary-light);">{requestId}</code>
+        <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.75rem;">
+          A <code>crypto.randomUUID()</code> generated per request. Also set as the <code>X-Request-ID</code> response header.
+        </p>
+      </div>
+
+      <div class="card" style="border-color: rgba(6,182,212,0.3);">
+        <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">Middleware Timing</div>
+        <div style="font-size: 2.5rem; font-weight: 800; color: var(--color-accent);">{middlewareDuration}ms</div>
+        <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.5rem;">
+          Time elapsed between middleware entry and page render (startTime → now).
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">Visitor IP</div>
+        <code style="color: var(--color-accent-light);">{visitorIp}</code>
+        <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.75rem;">
+          Read from <code>x-forwarded-for</code> header (set by Contentstack Launch's load balancer).
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">Theme Preference</div>
+        <code style="color: var(--color-accent-light);">{theme}</code>
+        <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.75rem;">
+          Read from the <code>theme</code> cookie. Defaults to "dark" if not set.
+        </p>
+      </div>
+
+      <div class="card" style={`border-color: ${isAuthenticated ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.3)"};`}>
+        <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">Auth Status</div>
+        <div style={`font-size: 1.5rem; font-weight: 700; color: ${isAuthenticated ? "var(--color-success)" : "var(--color-danger)"};`}>
+          {isAuthenticated ? "✅ Authenticated" : "❌ Not Authenticated"}
+        </div>
+        <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.75rem;">
+          Checked via <code>Authorization: Bearer demo-token-123</code> header.
+        </p>
+      </div>
+
+      <div class="card">
+        <div style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem;">Server Timestamp</div>
+        <code style="font-size: 0.8rem; word-break: break-all;">{serverTime}</code>
+        <p style="color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.75rem;">
+          Generated in the page, but <code>startTime</code> was set in middleware before page render.
+        </p>
+      </div>
+    </div>
+
+    <!-- Response headers -->
+    <h2 style="color: #fff; font-size: 1.15rem; margin-bottom: 1.25rem;">📤 Response Headers Set by Middleware</h2>
+    <div class="card" style="margin-bottom: 2.5rem; border-color: rgba(124,58,237,0.2);">
+      <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 1rem;">
+        Open DevTools → Network → select this page → check the Response Headers:
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        {[
+          ["X-Request-ID", requestId],
+          ["X-Response-Time", `${middlewareDuration}ms (approx)`],
+          ["X-Powered-By", "Astro on Contentstack Launch"],
+        ].map(([key, val]) => (
+          <div style="display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap;">
+            <code style="color: var(--color-warning); min-width: 180px; font-size: 0.8rem;">{key}</code>
+            <code style="color: var(--color-text-muted); font-size: 0.78rem; word-break: break-all;">{val}</code>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Request headers -->
+    <h2 style="color: #fff; font-size: 1.15rem; margin-bottom: 1.25rem;">📥 Incoming Request Headers</h2>
+    <div class="card" style="margin-bottom: 2.5rem;">
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 300px; overflow-y: auto;">
+        {Object.entries(headers).map(([key, val]) => (
+          <div style="display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); padding-bottom: 0.4rem;">
+            <code style="color: var(--color-accent); min-width: 200px; font-size: 0.78rem;">{key}</code>
+            <code style="color: var(--color-text-muted); font-size: 0.75rem; word-break: break-all;">{val.slice(0, 100)}{val.length > 100 ? "…" : ""}</code>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Middleware source -->
+    <div class="card" style="border-color: rgba(124,58,237,0.3);">
+      <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1rem;">📄 src/middleware/index.ts</h3>
+      <pre style="margin: 0; font-size: 0.78rem;"><code>import &#123; defineMiddleware &#125; from "astro:middleware";
+
+export const onRequest = defineMiddleware(async (context, next) =&gt; &#123;
+  const requestId = crypto.randomUUID();
+  const startTime = Date.now();
+
+  // Inject into Astro.locals (available in all SSR pages)
+  context.locals.requestId = requestId;
+  context.locals.startTime = startTime;
+  context.locals.visitorIp = context.request.headers
+    .get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+  context.locals.theme = context.cookies.get("theme")?.value ?? "dark";
+  context.locals.isAuthenticated = 
+    context.request.headers.get("authorization") === "Bearer demo-token-123";
+
+  const response = await next(); // render the page
+
+  // Mutate response headers after rendering
+  response.headers.set("X-Request-ID", requestId);
+  response.headers.set("X-Response-Time", `$&#123;Date.now() - startTime&#125;ms`);
+  response.headers.set("X-Powered-By", "Astro on Contentstack Launch");
+
+  console.log(`[$&#123;requestId.slice(0,8)&#125;] $&#123;context.url.pathname&#125; → $&#123;response.status&#125;`);
+  return response;
+&#125;);</code></pre>
+    </div>
+  </div>
+</Layout>

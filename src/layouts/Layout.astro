@@ -1,0 +1,116 @@
+---
+import { ViewTransitions } from "astro:transitions";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  activeNav?: string;
+}
+
+const {
+  title,
+  description = "A comprehensive Astro showcase covering SSR, SSG, Islands, Content Collections, API Routes, and Middleware.",
+  image = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&auto=format&fit=crop",
+  activeNav,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site ?? "http://localhost:4321");
+
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/features", label: "Features" },
+  { href: "/blog", label: "Blog" },
+  { href: "/ssr", label: "SSR Demo" },
+  { href: "/api-demo", label: "API Demo" },
+  { href: "/islands", label: "Islands" },
+  { href: "/middleware-demo", label: "Middleware" },
+  { href: "/about", label: "About" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} | Astro Feature Showcase</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={image} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:type" content="website" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- View Transitions -->
+    <ViewTransitions />
+  </head>
+
+  <body>
+    <nav>
+      <div class="nav-inner">
+        <a href="/" class="nav-logo">
+          <svg width="22" height="22" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M81.504 9.81C83.374 7.17 87.103 6.38 90.235 7.928L119.93 22.775C123.523 24.556 125.073 28.79 123.396 32.43L84.948 116.52C83.622 119.392 80.45 121.01 77.299 120.371L21.299 109.121C17.613 108.373 15.174 104.832 15.826 101.128L28.826 27.128C29.389 23.956 32.098 21.608 35.317 21.541L81.504 9.81Z" fill="url(#paint0_linear)"/>
+            <defs>
+              <linearGradient id="paint0_linear" x1="20" y1="20" x2="108" y2="108" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7C3AED"/>
+                <stop offset="1" stop-color="#06B6D4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          Astro Showcase
+        </a>
+        <ul class="nav-links">
+          {navLinks.map(({ href, label }) => (
+            <li>
+              <a
+                href={href}
+                class={activeNav === href || Astro.url.pathname === href ? "active" : ""}
+              >
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </nav>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <span>
+          Built with <a href="https://astro.build" target="_blank" rel="noopener">Astro</a> ·
+          Deployed on <a href="https://www.contentstack.com/products/launch" target="_blank" rel="noopener">Contentstack Launch</a>
+        </span>
+        <span class="text-muted">
+          Hybrid mode · SSG + SSR · Islands Architecture
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

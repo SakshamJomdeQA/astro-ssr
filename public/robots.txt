@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://your-launch-app.contentstack.com/sitemap-index.xml

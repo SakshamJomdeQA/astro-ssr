@@ -1,0 +1,72 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  icon: string;
+  badge: string;
+  badgeClass: string;
+  href?: string;
+  color?: string;
+}
+
+const {
+  title,
+  description,
+  icon,
+  badge,
+  badgeClass,
+  href,
+  color = "var(--color-primary)",
+} = Astro.props;
+---
+
+<div class="feature-card" style={`--accent: ${color};`}>
+  <div class="card-icon">{icon}</div>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+    <h3 style="font-size: 1.1rem; color: #fff;">{title}</h3>
+    <span class={`badge ${badgeClass}`}>{badge}</span>
+  </div>
+  <p style="color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.6;">{description}</p>
+  {href && (
+    <a href={href} class="card-link">
+      Explore →
+    </a>
+  )}
+</div>
+
+<style>
+  .feature-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    transition: all 0.25s;
+    box-shadow: var(--shadow-card);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .feature-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 25%, transparent), var(--shadow-card);
+    transform: translateY(-3px);
+  }
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  .card-link {
+    margin-top: 1rem;
+    color: var(--accent);
+    font-size: 0.875rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: gap 0.2s;
+  }
+  .card-link:hover {
+    gap: 0.5rem;
+    color: var(--accent);
+  }
+</style>

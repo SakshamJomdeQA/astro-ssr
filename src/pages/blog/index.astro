@@ -1,0 +1,75 @@
+---
+// SSG — statically generated
+import Layout from "../../layouts/Layout.astro";
+import BlogCard from "../../components/BlogCard.astro";
+import { getCollection } from "astro:content";
+
+const posts = await getCollection("blog", ({ data }) => !data.draft);
+const sorted = posts.sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+// Collect all unique tags
+const allTags = [...new Set(posts.flatMap((p) => p.data.tags))].sort();
+---
+
+<Layout title="Blog" description="In-depth guides on Astro's SSG, SSR, Islands, Content Collections, API Routes, Middleware, and more.">
+  <div class="container" style="padding: 4rem 1.5rem 5rem;">
+    <!-- Header -->
+    <div class="page-header text-center" style="padding: 2rem 0 3.5rem;">
+      <div class="badge badge-ssg mb-2">⚡ SSG Page</div>
+      <h1 style="color: #fff; margin: 1rem 0;">Astro Feature Guides</h1>
+      <p class="text-muted" style="margin: 0.75rem auto 0; font-size: 1.05rem;">
+        In-depth articles covering every Astro feature — generated from typed Content Collections.
+      </p>
+    </div>
+
+    <!-- Tag filter display (static — for full interactivity, use an Island) -->
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2.5rem; justify-content: center;">
+      {allTags.map(tag => (
+        <span class="badge" style="background: var(--color-surface-2); color: var(--color-text-muted); border-color: var(--color-border); font-size: 0.7rem; cursor: default;">
+          #{tag}
+        </span>
+      ))}
+    </div>
+
+    <!-- Stats row -->
+    <div style="display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap;">
+      <div style="text-align: center;">
+        <div style="font-size: 2.5rem; font-weight: 800; color: #fff;">{posts.length}</div>
+        <div style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Posts</div>
+      </div>
+      <div style="width: 1px; background: var(--color-border);"></div>
+      <div style="text-align: center;">
+        <div style="font-size: 2.5rem; font-weight: 800; color: #fff;">{allTags.length}</div>
+        <div style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Topics</div>
+      </div>
+      <div style="width: 1px; background: var(--color-border);"></div>
+      <div style="text-align: center;">
+        <div style="font-size: 2.5rem; font-weight: 800; color: var(--color-ssg);">SSG</div>
+        <div style="font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Rendered</div>
+      </div>
+    </div>
+
+    <!-- Post grid -->
+    <div class="grid-3">
+      {sorted.map((post) => <BlogCard post={post} />)}
+    </div>
+
+    <!-- Content Collections callout -->
+    <div class="card mt-4" style="margin-top: 3rem; border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.03);">
+      <div style="display: flex; align-items: flex-start; gap: 1.25rem; flex-wrap: wrap;">
+        <div style="font-size: 2rem;">📚</div>
+        <div style="flex: 1; min-width: 200px;">
+          <h3 style="color: #fff; margin-bottom: 0.5rem; font-size: 1.05rem;">Powered by Content Collections</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.875rem; margin: 0;">
+            All {posts.length} posts are Markdown / MDX files in <code>src/content/blog/</code>, validated against
+            a Zod schema defined in <code>src/content/config.ts</code>. The schema enforces required fields like
+            <code>title</code>, <code>description</code>, and <code>pubDate</code> at build time — catching
+            typos before they reach production.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

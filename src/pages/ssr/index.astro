@@ -1,0 +1,187 @@
+---
+// SSR — rendered on every request
+export const prerender = false;
+
+import Layout from "../../layouts/Layout.astro";
+
+const { requestId, visitorIp, theme, isAuthenticated } = Astro.locals;
+
+// Read request data
+const url = Astro.url;
+const method = Astro.request.method;
+const userAgent = Astro.request.headers.get("user-agent") ?? "unknown";
+const acceptLang = Astro.request.headers.get("accept-language") ?? "unknown";
+const referer = Astro.request.headers.get("referer") ?? "direct";
+
+// Query params
+const queryParams: Record<string, string> = {};
+url.searchParams.forEach((val, key) => { queryParams[key] = val; });
+
+// Cookie example — read/write
+const visitCount = parseInt(Astro.cookies.get("visitCount")?.value ?? "0") + 1;
+Astro.cookies.set("visitCount", String(visitCount), {
+  maxAge: 60 * 60 * 24 * 30,
+  path: "/",
+});
+
+const serverTime = new Date();
+const formattedTime = serverTime.toLocaleString("en-US", {
+  weekday: "long",
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  timeZone: "UTC",
+  timeZoneName: "short",
+});
+---
+
+<Layout title="SSR Demo" description="A fully server-rendered Astro page demonstrating request data, cookies, headers, and middleware locals.">
+  <div class="container" style="padding: 4rem 1.5rem 5rem; max-width: 900px;">
+    <!-- Header -->
+    <div style="margin-bottom: 3rem;">
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+        <span class="badge badge-ssr">🖥️ SSR Page</span>
+        <span class="badge" style="background: rgba(6,182,212,0.1); color: var(--color-accent); border-color: rgba(6,182,212,0.3);">
+          export const prerender = false
+        </span>
+      </div>
+      <h1 style="color: #fff; margin-bottom: 1rem;">Server-Side Rendering Demo</h1>
+      <p style="color: var(--color-text-muted); font-size: 1.05rem; max-width: 65ch;">
+        This page is rendered on the <strong>server on every request</strong>. Refresh to see the time update.
+        The data below is generated fresh for <em>your specific request</em>.
+      </p>
+    </div>
+
+    <!-- Server time highlight -->
+    <div
+      style="background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(6,182,212,0.08)); border: 1px solid rgba(124,58,237,0.4); border-radius: var(--radius-lg); padding: 2rem; margin-bottom: 2rem; text-align: center;"
+    >
+      <div style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">
+        Server Time (UTC) — Generated this render
+      </div>
+      <div style="font-size: clamp(1.1rem, 2.5vw, 1.5rem); font-weight: 700; color: #fff; font-variant-numeric: tabular-nums;">
+        {formattedTime}
+      </div>
+      <div style="font-size: 0.8rem; color: var(--color-text-muted); margin-top: 0.5rem;">
+        Unix: <code>{Math.floor(serverTime.getTime() / 1000)}</code>
+      </div>
+    </div>
+
+    <!-- Data grid -->
+    <div class="grid-2" style="gap: 1.25rem; margin-bottom: 2rem;">
+      <!-- Request info -->
+      <div class="card">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1rem;">📨 Request Info</h3>
+        <dl style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; font-size: 0.85rem;">
+          <dt style="color: var(--color-text-muted);">Method</dt>
+          <dd><code>{method}</code></dd>
+          <dt style="color: var(--color-text-muted);">URL</dt>
+          <dd><code style="word-break: break-all;">{url.pathname}{url.search}</code></dd>
+          <dt style="color: var(--color-text-muted);">User Agent</dt>
+          <dd style="color: var(--color-text-muted); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis;">{userAgent.slice(0, 60)}{userAgent.length > 60 ? "…" : ""}</dd>
+          <dt style="color: var(--color-text-muted);">Accept-Language</dt>
+          <dd><code>{acceptLang.split(",")[0]}</code></dd>
+          <dt style="color: var(--color-text-muted);">Referer</dt>
+          <dd><code style="word-break: break-all;">{referer}</code></dd>
+        </dl>
+      </div>
+
+      <!-- Middleware locals -->
+      <div class="card">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1rem;">🔒 Middleware Locals</h3>
+        <dl style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; font-size: 0.85rem;">
+          <dt style="color: var(--color-text-muted);">Request ID</dt>
+          <dd><code style="font-size: 0.78rem;">{requestId}</code></dd>
+          <dt style="color: var(--color-text-muted);">Visitor IP</dt>
+          <dd><code>{visitorIp}</code></dd>
+          <dt style="color: var(--color-text-muted);">Theme</dt>
+          <dd><code>{theme}</code></dd>
+          <dt style="color: var(--color-text-muted);">Authenticated</dt>
+          <dd>
+            <span style={`color: ${isAuthenticated ? "var(--color-success)" : "var(--color-danger)"};`}>
+              {isAuthenticated ? "✅ Yes" : "❌ No (send Bearer demo-token-123)"}
+            </span>
+          </dd>
+        </dl>
+      </div>
+
+      <!-- Cookies -->
+      <div class="card">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1rem;">🍪 Cookies</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+          <code>visitCount</code> is incremented on every request and stored as a 30-day cookie.
+        </p>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div
+            style="font-size: 3.5rem; font-weight: 800; color: var(--color-primary-light); line-height: 1;"
+          >
+            {visitCount}
+          </div>
+          <div>
+            <div style="color: #fff; font-weight: 600; font-size: 0.9rem;">visit{visitCount === 1 ? "" : "s"}</div>
+            <div style="color: var(--color-text-muted); font-size: 0.78rem;">to /ssr this session</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Query params -->
+      <div class="card">
+        <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1rem;">🔍 Query Parameters</h3>
+        {Object.keys(queryParams).length > 0 ? (
+          <dl style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; font-size: 0.85rem;">
+            {Object.entries(queryParams).map(([k, v]) => (
+              <>
+                <dt style="color: var(--color-text-muted);">{k}</dt>
+                <dd><code>{v}</code></dd>
+              </>
+            ))}
+          </dl>
+        ) : (
+          <p style="color: var(--color-text-muted); font-size: 0.875rem;">
+            No query params. Try adding some:<br />
+            <a href="/ssr?name=astro&version=5&mode=hybrid" style="font-size: 0.8rem;">
+              /ssr?name=astro&version=5&mode=hybrid
+            </a>
+          </p>
+        )}
+      </div>
+    </div>
+
+    <!-- Dynamic user routes -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1rem;">🔀 Dynamic SSR Routes</h3>
+      <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">
+        Try the dynamic <code>/ssr/user/[id]</code> route — the <code>[id]</code> is read at request time, not build time:
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+        {["astro-dev", "launch-user", "42", "contentstack"].map(id => (
+          <a href={`/ssr/user/${id}`} class="btn btn-outline" style="font-size: 0.8rem;">
+            /ssr/user/{id}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- Code snippet -->
+    <div class="card" style="border-color: rgba(124,58,237,0.3);">
+      <h3 style="color: #fff; margin-bottom: 1rem; font-size: 1rem;">📄 How This Page Works</h3>
+      <pre style="margin: 0; font-size: 0.8rem;"><code>---
+// src/pages/ssr/index.astro
+export const prerender = false; // opt into SSR
+
+// All of this runs on the SERVER, per request:
+const visitCount = parseInt(Astro.cookies.get("visitCount")?.value ?? "0") + 1;
+Astro.cookies.set("visitCount", String(visitCount), &#123; maxAge: 2592000 &#125;);
+
+const serverTime = new Date(); // always fresh!
+const userAgent = Astro.request.headers.get("user-agent");
+
+// Locals injected by middleware/index.ts
+const &#123; requestId, visitorIp &#125; = Astro.locals;
+---</code></pre>
+    </div>
+  </div>
+</Layout>

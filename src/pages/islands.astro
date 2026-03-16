@@ -1,0 +1,132 @@
+---
+// SSG — statically generated; the React islands hydrate on the client
+import Layout from "../layouts/Layout.astro";
+import Counter from "../components/Counter.tsx";
+---
+
+<Layout title="Islands Architecture" description="See Astro Islands in action — React components with partial hydration using client:load, client:visible, and client:idle directives.">
+  <div class="container" style="padding: 4rem 1.5rem 5rem; max-width: 1000px;">
+    <!-- Header -->
+    <div style="margin-bottom: 3rem;">
+      <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+        <span class="badge badge-island">🏝️ Islands Architecture</span>
+        <span class="badge badge-ssg">⚡ SSG Page</span>
+        <span style="display: inline-flex; align-items: center; gap: 0.4rem;" class="badge" style="background: rgba(6,182,212,0.1); color: var(--color-accent); border-color: rgba(6,182,212,0.3);">
+          ⚛️ React 19
+        </span>
+      </div>
+      <h1 style="color: #fff; margin-bottom: 1rem;">Astro Islands</h1>
+      <p style="color: var(--color-text-muted); font-size: 1.05rem; max-width: 65ch;">
+        This page is <strong>statically generated</strong> — but contains interactive React components
+        ("islands") that hydrate with different strategies. Everything outside an island ships <strong>zero JS</strong>.
+      </p>
+    </div>
+
+    <!-- Hydration strategies comparison -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+      <!-- client:load -->
+      <div class="card" style="border-color: rgba(124,58,237,0.4);">
+        <div style="margin-bottom: 1.25rem;">
+          <span class="badge badge-island" style="margin-bottom: 0.75rem;">client:load</span>
+          <h3 style="color: #fff; font-size: 1rem;">Immediate Hydration</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.4rem;">
+            Hydrates as soon as the page loads. Use for above-the-fold interactive elements.
+          </p>
+        </div>
+        <Counter client:load initialCount={0} step={1} label="client:load" />
+      </div>
+
+      <!-- client:visible -->
+      <div class="card" style="border-color: rgba(245,158,11,0.4);">
+        <div style="margin-bottom: 1.25rem;">
+          <span class="badge badge-island" style="margin-bottom: 0.75rem;">client:visible</span>
+          <h3 style="color: #fff; font-size: 1rem;">Viewport Hydration</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.4rem;">
+            Hydrates when scrolled into view. Ideal for below-the-fold components.
+          </p>
+        </div>
+        <Counter client:visible initialCount={10} step={5} label="client:visible" />
+      </div>
+
+      <!-- client:idle -->
+      <div class="card" style="border-color: rgba(6,182,212,0.4);">
+        <div style="margin-bottom: 1.25rem;">
+          <span class="badge badge-api" style="margin-bottom: 0.75rem;">client:idle</span>
+          <h3 style="color: #fff; font-size: 1rem;">Idle Hydration</h3>
+          <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.4rem;">
+            Hydrates when the browser is idle. Use for low-priority, non-critical components.
+          </p>
+        </div>
+        <Counter client:idle initialCount={100} step={10} label="client:idle" />
+      </div>
+    </div>
+
+    <!-- Explanation cards -->
+    <div class="glow-divider" style="margin: 0 0 2.5rem;"></div>
+
+    <div class="grid-2" style="margin-bottom: 2.5rem;">
+      <div class="card">
+        <h3 style="color: #fff; margin-bottom: 0.75rem; font-size: 1rem;">⚡ What Makes This Page Fast</h3>
+        <ul style="color: var(--color-text-muted); font-size: 0.875rem; line-height: 1.8; list-style: none;">
+          <li>✅ Page HTML generated at build time (SSG)</li>
+          <li>✅ Static content ships <strong>0 JS</strong></li>
+          <li>✅ React loads <strong>only for islands</strong></li>
+          <li>✅ Islands hydrate <strong>in parallel</strong></li>
+          <li>✅ <code>client:visible</code> defers off-screen JS</li>
+          <li>✅ No client-side router overhead</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3 style="color: #fff; margin-bottom: 0.75rem; font-size: 1rem;">📄 How It's Done in Code</h3>
+        <pre style="margin: 0; font-size: 0.78rem;"><code>---
+// src/pages/islands.astro (SSG)
+import Counter from "../components/Counter.tsx";
+---
+
+&lt;!-- Static HTML — no JS --&gt;
+&lt;h1&gt;My Page&lt;/h1&gt;
+
+&lt;!-- React Island: hydrate immediately --&gt;
+&lt;Counter client:load initialCount=&#123;0&#125; /&gt;
+
+&lt;!-- React Island: hydrate when visible --&gt;
+&lt;Counter client:visible initialCount=&#123;10&#125; /&gt;
+
+&lt;!-- React Island: hydrate when idle --&gt;
+&lt;Counter client:idle initialCount=&#123;100&#125; /&gt;</code></pre>
+      </div>
+    </div>
+
+    <!-- Directives table -->
+    <div class="card">
+      <h3 style="color: #fff; margin-bottom: 1.25rem; font-size: 1rem;">🏝️ All Client Directives</h3>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr>
+              <th style="text-align: left; padding: 0.6rem 1rem; background: var(--color-surface-2); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">Directive</th>
+              <th style="text-align: left; padding: 0.6rem 1rem; background: var(--color-surface-2); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">When Hydrates</th>
+              <th style="text-align: left; padding: 0.6rem 1rem; background: var(--color-surface-2); color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);">Best For</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["client:load", "Immediately on load", "Critical interactive UI"],
+              ["client:idle", "Browser idle time", "Low-priority widgets"],
+              ["client:visible", "Enters the viewport", "Below-fold content"],
+              ['client:media="(max-width: 640px)"', "Media query matches", "Responsive components"],
+              ['client:only="react"', "Client-side only (no SSR)", "Browser-only APIs"],
+            ].map(([dir, when, use]) => (
+              <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="padding: 0.6rem 1rem;"><code style="font-size: 0.8rem;">{dir}</code></td>
+                <td style="padding: 0.6rem 1rem; color: var(--color-text-muted);">{when}</td>
+                <td style="padding: 0.6rem 1rem; color: var(--color-text-muted);">{use}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</Layout>

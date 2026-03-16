@@ -1,0 +1,190 @@
+---
+// SSG — statically generated feature overview
+import Layout from "../layouts/Layout.astro";
+import { Image } from "astro:assets";
+
+const buildTime = new Date().toISOString();
+---
+
+<Layout title="Features" description="Comprehensive overview of all Astro features demonstrated in this project: SSG, SSR, Islands, Content Collections, API Routes, Middleware, and more.">
+  <div class="container" style="padding: 4rem 1.5rem 5rem;">
+    <!-- Header -->
+    <div class="page-header text-center" style="padding: 2rem 0 4rem;">
+      <div class="badge badge-ssg mb-2">⚡ SSG Page</div>
+      <h1 style="color: #fff; margin: 1rem 0;">Astro Feature Overview</h1>
+      <p class="text-muted" style="margin: 0.75rem auto 0; font-size: 1.05rem; max-width: 60ch;">
+        Every major Astro feature — explained and linked to a live demo.
+      </p>
+    </div>
+
+    <!-- Rendering Modes Section -->
+    <section style="margin-bottom: 4rem;">
+      <h2 style="color: #fff; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+        <span style="background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 0.75rem; color: var(--color-text-muted);">01</span>
+        Rendering Modes
+      </h2>
+      <div class="grid-3">
+        {[
+          {
+            title: "Static Site Generation (SSG)",
+            badge: "SSG",
+            badgeClass: "badge-ssg",
+            icon: "⚡",
+            color: "var(--color-ssg)",
+            desc: "Default in hybrid mode. Pages rendered at build time to plain HTML. Serve from CDN, no server required.",
+            points: ["Zero server processing at runtime", "Sub-50ms TTFB from CDN", "Perfect SEO — crawlers see full HTML", "getStaticPaths() for dynamic routes"],
+            href: "/blog/astro-ssg-guide",
+          },
+          {
+            title: "Server-Side Rendering (SSR)",
+            badge: "SSR",
+            badgeClass: "badge-ssr",
+            icon: "🖥️",
+            color: "var(--color-ssr)",
+            desc: "Per-request rendering. Access cookies, headers, query params. Opt in per-page with export const prerender = false.",
+            points: ["Fresh data on every request", "Personalised content", "Cookie & session access", "Dynamic [slug] routes at runtime"],
+            href: "/ssr",
+          },
+          {
+            title: "Hybrid Mode",
+            badge: "Hybrid",
+            badgeClass: "badge-island",
+            icon: "⚖️",
+            color: "var(--color-island)",
+            desc: "Mix SSG and SSR in the same project. output: 'hybrid' makes all pages SSG by default — opt into SSR per page.",
+            points: ["output: 'hybrid' in config", "SSG default, SSR opt-in", "API routes always SSR", "Best of both worlds"],
+            href: "/about",
+          },
+        ].map(f => (
+          <div class="card" style={`border-color: color-mix(in srgb, ${f.color} 30%, transparent);`}>
+            <div class="card-top" style="margin-bottom: 1rem;">
+              <div style="font-size: 2rem; margin-bottom: 0.75rem;">{f.icon}</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                <h3 style={`color: ${f.color}; font-size: 1rem;`}>{f.title}</h3>
+                <span class={`badge ${f.badgeClass}`}>{f.badge}</span>
+              </div>
+              <p style="color: var(--color-text-muted); font-size: 0.875rem;">{f.desc}</p>
+            </div>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.25rem;">
+              {f.points.map(pt => (
+                <li style="font-size: 0.825rem; color: var(--color-text-muted); display: flex; gap: 0.5rem; align-items: flex-start;">
+                  <span style={`color: ${f.color}; flex-shrink: 0;`}>✓</span>
+                  {pt}
+                </li>
+              ))}
+            </ul>
+            <a href={f.href} class="btn btn-outline" style="font-size: 0.825rem; width: 100%; justify-content: center;">
+              Live Demo →
+            </a>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Other Features -->
+    <section style="margin-bottom: 4rem;">
+      <h2 style="color: #fff; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+        <span style="background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 0.75rem; color: var(--color-text-muted);">02</span>
+        Core Features
+      </h2>
+      <div class="grid-2">
+        {[
+          {
+            title: "Islands Architecture",
+            badge: "🏝️ Islands",
+            desc: "Interactive React components hydrated in isolation. The page ships 0 JS for static content, and only the island's bundle for interactive parts.",
+            code: '<Counter client:load />\n<Counter client:visible />\n<Counter client:idle />',
+            href: "/islands",
+          },
+          {
+            title: "Content Collections",
+            badge: "📚 MDX",
+            desc: "Type-safe Markdown/MDX files validated with Zod schemas. Full TypeScript IntelliSense. Auto-generated slugs. MDX embeds React in Markdown.",
+            code: 'const posts = await getCollection("blog");\n// TypeScript knows all frontmatter fields!',
+            href: "/blog",
+          },
+          {
+            title: "API Routes",
+            badge: "🔌 API",
+            desc: "File-based REST endpoints alongside your pages. Export GET, POST, PUT, DELETE handlers. Full access to Node.js APIs.",
+            code: '// src/pages/api/hello.ts\nexport const GET: APIRoute = async ({ locals }) => {\n  return new Response(JSON.stringify({ ok: true }));\n};',
+            href: "/api-demo",
+          },
+          {
+            title: "Middleware",
+            badge: "🔒 Middleware",
+            desc: "Intercept every request. Inject shared data into locals, add response headers, implement logging, authentication, and rate limiting.",
+            code: 'export const onRequest = defineMiddleware(\n  async (context, next) => {\n    context.locals.userId = getUser();\n    return next();\n  }\n);',
+            href: "/middleware-demo",
+          },
+        ].map(f => (
+          <div class="card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="color: #fff; font-size: 1rem;">{f.title}</h3>
+              <span class="badge" style="background: var(--color-surface-2); color: var(--color-text-muted); border-color: var(--color-border); font-size: 0.7rem;">{f.badge}</span>
+            </div>
+            <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 1rem;">{f.desc}</p>
+            <pre style="margin: 0 0 1.25rem; font-size: 0.75rem; background: var(--color-bg); border: 1px solid var(--color-border);"><code>{f.code}</code></pre>
+            <a href={f.href} class="btn btn-outline" style="font-size: 0.825rem;">Demo →</a>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Image optimization section -->
+    <section id="images" style="margin-bottom: 4rem;">
+      <h2 style="color: #fff; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+        <span style="background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 0.75rem; color: var(--color-text-muted);">03</span>
+        Image Optimization
+      </h2>
+      <div class="card">
+        <div class="grid-2" style="align-items: center;">
+          <div>
+            <span class="badge badge-ssg" style="margin-bottom: 1rem;">Built-in &lt;Image&gt; Component</span>
+            <h3 style="color: #fff; margin-bottom: 0.75rem;">Automatic Optimization</h3>
+            <ul style="color: var(--color-text-muted); font-size: 0.875rem; list-style: none; display: flex; flex-direction: column; gap: 0.5rem;">
+              <li>✅ Automatic <code>width</code> / <code>height</code> for CLS prevention</li>
+              <li>✅ WebP / AVIF format conversion</li>
+              <li>✅ Responsive <code>srcset</code> generation</li>
+              <li>✅ Lazy loading by default</li>
+              <li>✅ Remote image support (via config)</li>
+              <li>✅ <code>&lt;Picture&gt;</code> for art direction</li>
+            </ul>
+            <div style="margin-top: 1.25rem;">
+              <pre style="font-size: 0.78rem; margin: 0;"><code>import &#123; Image &#125; from "astro:assets";
+
+&lt;Image
+  src="https://picsum.photos/800/400"
+  alt="Optimized image"
+  width=&#123;800&#125;
+  height=&#123;400&#125;
+  loading="lazy"
+/&gt;</code></pre>
+            </div>
+          </div>
+          <div>
+            <img
+              src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80"
+              alt="Code on a screen — optimized via Astro Image"
+              width="600"
+              height="400"
+              loading="lazy"
+              style="width: 100%; height: 220px; object-fit: cover; border-radius: var(--radius-md); border: 1px solid var(--color-border);"
+            />
+            <p style="color: var(--color-text-muted); font-size: 0.75rem; margin-top: 0.5rem; text-align: center;">
+              Remote image from Unsplash — lazy loaded
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Build info -->
+    <div style="text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--color-border);">
+      <div style="display: inline-flex; align-items: center; gap: 0.75rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-full); padding: 0.5rem 1.25rem; font-size: 0.8rem; color: var(--color-text-muted);">
+        <span style="width: 6px; height: 6px; background: var(--color-ssg); border-radius: 50%; display: inline-block;"></span>
+        Page built at <code style="font-size: 0.75rem;">{buildTime}</code>
+      </div>
+    </div>
+  </div>
+</Layout>
