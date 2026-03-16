@@ -10,7 +10,7 @@ export default async function handler(request, context) {
   // ------------------------------------------------------------------
   // 1. Geo-based routing — redirect visitors from a specific region
   // ------------------------------------------------------------------
-  if (pathname === '/') {
+  if (pathname === '/appliances') {
     const country = request.headers.get('visitor-ip-country') ?? '';
     const region  = request.headers.get('visitor-ip-region')  ?? '';
     const city    = request.headers.get('visitor-ip-city')    ?? '';
