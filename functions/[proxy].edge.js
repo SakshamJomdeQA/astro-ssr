@@ -1,54 +1,45 @@
-// Required — tells Contentstack Launch to deploy this file as an Edge Function.
 export const config = {
   runtime: 'edge',
 };
 
 export default async function handler(request, context) {
   const url = new URL(request.url);
-  const { pathname } = url;
+  const route = url.pathname;
 
-  // ------------------------------------------------------------------
-  // 1. Geo-based routing — redirect visitors from a specific region
-  // ------------------------------------------------------------------
-  if (pathname === '/appliances') {
-    const country = request.headers.get('visitor-ip-country') ?? '';
-    const region  = request.headers.get('visitor-ip-region')  ?? '';
-    const city    = request.headers.get('visitor-ip-city')    ?? '';
+  if (route === '/appliances') {
+    const geoHeaders = {
+      country: request.headers.get('visitor-ip-country'),
+      region: request.headers.get('visitor-ip-region'),
+      city: request.headers.get('visitor-ip-city'),
+      };
 
-    console.log('[EDGE] Geo:', { country, region, city });
+    // Contentstack Launch: use context.env (WinterCG runtime has no process object)
+    const edgeApiBaseUrl = context?.env?.EDGE_API_BASE_URL;
 
-    if (country === 'IN') {
-      return Response.redirect(new URL('/in', url), 302);
+    console.log('[EDGE] Geo Headers:', geoHeaders);
+
+    const body = {
+      source: 'edge',
+      geo: geoHeaders,
+    };
+    if (edgeApiBaseUrl) {
+      body.config = { apiBaseUrl: edgeApiBaseUrl };
     }
-  }
 
-  // ------------------------------------------------------------------
-  // 2. A/B test — split traffic 50/50 between two variants on /landing
-  // ------------------------------------------------------------------
-  if (pathname === '/landing') {
-    const variant    = Math.random() < 0.5 ? 'a' : 'b';
-    const variantUrl = new URL(`/landing-${variant}`, url);
-
-    // context.waitUntil: log in background without delaying the response
+    // Reproduce CFL-0001: context.waitUntil with a background fetch (valid WinterCG usage)
     context.waitUntil(
-      Promise.resolve().then(() =>
-        console.log(`[EDGE] A/B variant served: ${variant}`)
-      )
+      fetch('https://jsonplaceholder.typicode.com/posts/1')
+        .then(r => r.json())
+        .then(data => console.log('[waitUntil] background result:', data))
     );
 
-    const response         = await fetch(new Request(variantUrl.toString(), request));
-    const modifiedResponse = new Response(response.body, response);
-    modifiedResponse.headers.set('X-AB-Variant', variant);
-    return modifiedResponse;
+    return new Response(JSON.stringify(body), {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 
-  // ------------------------------------------------------------------
-  // 3. Security headers — added to every response that reaches the origin
-  // ------------------------------------------------------------------
-  const originResponse = await fetch(request);
-  const secureResponse = new Response(originResponse.body, originResponse);
-  secureResponse.headers.set('X-Frame-Options', 'DENY');
-  secureResponse.headers.set('X-Content-Type-Options', 'nosniff');
-  secureResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  return secureResponse;
+  // fallback: pass through to origin or other logic
+  return fetch(request);
 }
