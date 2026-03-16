@@ -29,7 +29,7 @@
   "rewrites": [
     {
       "source": "/blog/:slug/:postId",
-      "destination": "/wp/pages/blogs?action=detail&page_id=:postId"
+      "destination": "/wp/pages/blogs/:postId"
     },
     {
       "source": "/assets/:category(products|storefront)/:path(.*)",
