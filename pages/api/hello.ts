@@ -2,23 +2,42 @@ import type { APIRoute } from "astro";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ locals, request }) => {
-  const data = {
-    message: "Hello from Astro API route! 👋",
-    feature: "Astro API Routes (SSR)",
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+}
+
+export const GET: APIRoute = ({ locals, request }) => {
+  return json({
+    message: "Hello from Astro API route!",
     timestamp: new Date().toISOString(),
     requestId: locals.requestId,
     url: request.url,
     method: request.method,
-    runtime: "Node.js via @astrojs/node adapter",
-    deployedOn: "Contentstack Launch",
-  };
+    env: import.meta.env.MODE,
+  });
+};
 
-  return new Response(JSON.stringify(data, null, 2), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
+export const POST: APIRoute = async ({ locals, request }) => {
+  let body: unknown = null;
+  try {
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      body = await request.json();
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
+      body = Object.fromEntries(await request.formData());
+    } else {
+      body = await request.text();
+    }
+  } catch {
+    return json({ error: "Invalid request body" }, 400);
+  }
+
+  return json({
+    message: "Hello from Astro API route (POST)!",
+    requestId: locals.requestId,
+    body,
   });
 };

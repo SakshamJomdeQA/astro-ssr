@@ -30,12 +30,13 @@ export default async function handler(request, context) {
   }
 
   // ------------------------------------------------------------------
-  // 3. Proxy /api/* to an external microservice, injecting an API key
+  // 3. Proxy /external/* to a third-party microservice, injecting an API key
+  //    NOTE: Do NOT intercept /api/* — those are served by the Astro SSR origin.
   // ------------------------------------------------------------------
-  if (pathname.startsWith("/api/")) {
+  if (pathname.startsWith("/external/")) {
     const apiKey = context.env.EXTERNAL_API_KEY ?? "";
     const upstream = new URL(
-      pathname.replace("/api/", "/v1/"),
+      pathname.replace("/external/", "/v1/"),
       "https://external-service.example.com"
     );
     upstream.search = url.search;
