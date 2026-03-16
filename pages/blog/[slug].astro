@@ -1,6 +1,6 @@
 ---
-// SSG — uses getStaticPaths to pre-render all blog posts
-import { getCollection, getEntry } from "astro:content";
+export const prerender = true;
+import { getCollection } from "astro:content";
 import BlogLayout from "../../layouts/BlogLayout.astro";
 
 export async function getStaticPaths() {

@@ -11,9 +11,13 @@ export default defineConfig({
   // Use root-level directories instead of src/ — pages/, components/, layouts/, etc.
   srcDir: "./",
 
-  // Static by default (SSG); pages/routes with `export const prerender = false` become SSR.
-  // In Astro v5, "hybrid" mode was merged into "static" — the adapter enables per-page SSR opt-in.
-  output: "static",
+  // "server" mode: ALL requests go through the Astro SSR pipeline → middleware runs on everything.
+  // Pages with `export const prerender = true` are still built as static HTML at build time,
+  // but the node standalone server routes every request through the middleware chain first,
+  // so Cache-Control and other response headers are applied uniformly.
+  // (With output:"static", the static file handler runs BELOW the middleware layer,
+  //  so middleware headers are silently dropped for prerendered pages.)
+  output: "server",
 
   adapter: node({
     mode: "standalone",
@@ -31,4 +35,5 @@ export default defineConfig({
       { protocol: "https", hostname: "picsum.photos" },
     ],
   },
+
 });
