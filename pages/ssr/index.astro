@@ -4,14 +4,22 @@ export const prerender = false;
 
 import Layout from "../../layouts/Layout.astro";
 
-const { requestId, visitorIp, theme, isAuthenticated } = Astro.locals;
+const { requestId } = Astro.locals;
 
-// Read request data
+// All request-level reads are safe here — this page is always SSR (prerender = false)
 const url = Astro.url;
 const method = Astro.request.method;
 const userAgent = Astro.request.headers.get("user-agent") ?? "unknown";
 const acceptLang = Astro.request.headers.get("accept-language") ?? "unknown";
 const referer = Astro.request.headers.get("referer") ?? "direct";
+const theme = Astro.cookies.get("theme")?.value ?? "dark";
+const visitorIp =
+  Astro.request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+  Astro.request.headers.get("x-real-ip") ??
+  "unknown";
+const isAuthenticated = (Astro.request.headers.get("authorization") ?? "").startsWith(
+  "Bearer demo-token-123"
+);
 
 // Query params
 const queryParams: Record<string, string> = {};

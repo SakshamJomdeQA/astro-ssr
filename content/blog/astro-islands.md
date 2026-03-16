@@ -8,8 +8,6 @@ image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&auto=
 featured: false
 ---
 
-import { Code } from 'astro:components';
-
 ## The Problem Islands Solve
 
 Traditional SPAs (Single Page Applications) ship an entire JavaScript bundle to the browser, even for pages that are mostly static text. This bloats bundle sizes and hurts performance.

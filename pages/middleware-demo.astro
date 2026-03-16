@@ -4,7 +4,17 @@ export const prerender = false;
 
 import Layout from "../layouts/Layout.astro";
 
-const { requestId, startTime, visitorIp, theme, isAuthenticated } = Astro.locals;
+const { requestId, startTime } = Astro.locals;
+
+// All request-level reads are safe here — this page is always SSR (prerender = false)
+const theme = Astro.cookies.get("theme")?.value ?? "dark";
+const visitorIp =
+  Astro.request.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+  Astro.request.headers.get("x-real-ip") ??
+  "unknown";
+const isAuthenticated = (Astro.request.headers.get("authorization") ?? "").startsWith(
+  "Bearer demo-token-123"
+);
 
 // Compute server processing time for this page
 const pageRenderStart = Date.now();
