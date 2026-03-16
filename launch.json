@@ -1,0 +1,67 @@
+{
+  "redirects": [
+    {
+      "source": "/blog/:slug",
+      "destination": "/news/:slug",
+      "statusCode": 308
+    },
+    {
+      "source": "/blogs/:category(product-updates|announcements)/:postId(.*)",
+      "destination": "/product-updates/:postId",
+      "statusCode": 301
+    },
+    {
+      "source": "/blog/post",
+      "destination": "https://example.com/news/page",
+      "statusCode": 308
+    },
+    {
+      "source": "/old-home",
+      "destination": "/",
+      "statusCode": 301,
+      "response": {
+        "headers": {
+          "x-powered-by": "launch"
+        }
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/blog/:slug/:postId",
+      "destination": "/wp/pages/blogs?action=detail&page_id=:postId"
+    },
+    {
+      "source": "/assets/:category(products|storefront)/:path(.*)",
+      "destination": "https://example.com/assets/:path",
+      "response": {
+        "headers": {
+          "x-robots-tag": "noindex"
+        }
+      }
+    },
+    {
+      "source": "/:path((?!blogs|docs|about-us).+)",
+      "destination": "https://example.com/:path",
+      "request": {
+        "headers": {
+          "x-api-key": "your-api-key-here"
+        }
+      }
+    },
+    {
+      "source": "/:path(.*)",
+      "destination": "/:path",
+      "response": {
+        "headers": {
+          "X-Frame-Options": "DENY",
+          "X-XSS-Protection": "0",
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "strict-origin-when-cross-origin",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "Cross-Origin-Opener-Policy": "same-origin"
+        }
+      }
+    }
+  ]
+}
