@@ -23,8 +23,8 @@
   ],
   "rewrites": [
     {
-      "source": "/blog/:slug/:postId",
-      "destination": "/wp/pages/blogs/:postId"
+      "source": "/posts/:slug",
+      "destination": "/blog/:slug"
     },
     {
       "source": "/:path(.*)",
