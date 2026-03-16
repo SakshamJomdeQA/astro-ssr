@@ -5,7 +5,7 @@
 // Execution order (highest → lowest priority):
 //   launch.json redirects → launch.json rewrites → Edge Function → Origin
 
-export default async function handler(request, context) {
+export default async function handler(request) {
   const url = new URL(request.url);
   const { pathname } = url;
 
@@ -30,32 +30,7 @@ export default async function handler(request, context) {
   }
 
   // ------------------------------------------------------------------
-  // 3. Proxy /external/* to a third-party microservice, injecting an API key
-  //    NOTE: Do NOT intercept /api/* — those are served by the Astro SSR origin.
-  // ------------------------------------------------------------------
-  if (pathname.startsWith("/external/")) {
-    const apiKey = context.env.EXTERNAL_API_KEY ?? "";
-    const upstream = new URL(
-      pathname.replace("/external/", "/v1/"),
-      "https://external-service.example.com"
-    );
-    upstream.search = url.search;
-
-    const proxiedRequest = new Request(upstream.toString(), {
-      method: request.method,
-      headers: request.headers,
-      body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
-    });
-    proxiedRequest.headers.set("X-Api-Key", apiKey);
-
-    const apiResponse = await fetch(proxiedRequest);
-    const modifiedApiResponse = new Response(apiResponse.body, apiResponse);
-    modifiedApiResponse.headers.set("X-Powered-By", "Contentstack Launch");
-    return modifiedApiResponse;
-  }
-
-  // ------------------------------------------------------------------
-  // 4. Add security headers to every other response
+  // 3. Add security headers to every other response
   // ------------------------------------------------------------------
   const originResponse = await fetch(request);
   const secureResponse = new Response(originResponse.body, originResponse);
