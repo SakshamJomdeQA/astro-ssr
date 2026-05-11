@@ -98,11 +98,7 @@ function SectionCard({
   );
 }
 
-export default function StreamingTester({
-  serverMode,
-}: {
-  serverMode: "stream" | "buffer";
-}) {
+export default function StreamingTester() {
   // ── SSE state ──────────────────────────────────────────────────────────
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [sseStatus, setSseStatus] = useState<StreamStatus>("idle");
@@ -236,34 +232,6 @@ export default function StreamingTester({
 
   return (
     <div style={{ fontFamily: "var(--font-sans, system-ui)", color: "var(--color-text, #e8e8f0)" }}>
-
-      {/* ── Server mode banner ── */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          padding: "0.85rem 1rem",
-          borderRadius: 10,
-          border: `1px solid ${serverMode === "stream" ? "rgba(16,185,129,0.35)" : "rgba(245,158,11,0.35)"}`,
-          background: serverMode === "stream" ? "rgba(16,185,129,0.07)" : "rgba(245,158,11,0.07)",
-          marginBottom: "1.5rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <span style={{ fontSize: "1.1rem" }}>{serverMode === "stream" ? "✅" : "⚠️"}</span>
-        <span style={{ fontSize: "0.85rem" }}>
-          <strong style={{ color: "#fff" }}>Server mode:</strong>{" "}
-          <code style={{ ...mono, color: serverMode === "stream" ? "#10b981" : "#f59e0b" }}>
-            {serverMode}
-          </code>
-          {serverMode === "buffer" && (
-            <span style={{ color: muted, marginLeft: "0.5rem" }}>
-              — set <code style={mono}>STREAMING_DISABLED=</code> to switch
-            </span>
-          )}
-        </span>
-      </div>
 
       {/* ── SSE Streaming Test ── */}
       <SectionCard

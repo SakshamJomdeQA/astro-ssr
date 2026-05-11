@@ -1,29 +1,24 @@
 /**
  * Custom Astro standalone server entry point.
  *
- * Astro's node adapter (standalone mode) auto-starts its own HTTP server on the
- * same port when entry.mjs is loaded.  That server has no writeHead patch, so
- * requests it serves bypass all our Cache-Control / header injection.
+ * Regular responses (HTML pages, JSON API) are always fully buffered before
+ * sending — Content-Length is set, Transfer-Encoding: chunked is removed.
+ * This makes the server compatible with Contentstack Launch regardless of
+ * whether the platform's HTTP Streaming toggle is ON or OFF.
  *
- * Setting ASTRO_NODE_AUTOSTART=disabled before the dynamic import() prevents the
- * adapter from starting its own server, leaving our custom server as the sole
- * listener.  This must be done via dynamic import (not static) so the env var is
- * in place before entry.mjs is evaluated.
+ * SSE responses (Content-Type: text/event-stream) are detected automatically
+ * and always streamed — buffering an infinite event stream is not possible.
  *
- * Modes (set via env var):
- *   STREAMING_DISABLED=true  → buffer the full response body before sending.
- *                              Useful when the hosting proxy doesn't support
- *                              chunked transfer / HTTP streaming. Cache-Control
- *                              and all other headers are still correctly applied.
- *   (default)                → streaming mode; headers are injected just before
- *                              writeHead fires, body chunks flow through as-is.
+ * Cache-Control is enforced on every response:
+ *   API routes  (/api/*)  → no-store
+ *   Everything else       → public, max-age=3600, s-maxage=31536000, must-revalidate
  *
- * Usage (set as the "start" script in package.json):
+ * Usage:
  *   node server.mjs
- *   STREAMING_DISABLED=true node server.mjs
  */
 
-// Must be set BEFORE the dynamic import so entry.mjs sees it during evaluation.
+// Prevent the node adapter from auto-starting its own server on the same port.
+// Must be set before the dynamic import so entry.mjs sees it at evaluation time.
 process.env.ASTRO_NODE_AUTOSTART = "disabled";
 
 const { handler } = await import("./dist/server/entry.mjs");
@@ -32,49 +27,37 @@ import http from "node:http";
 const PORT = parseInt(process.env.PORT ?? "4321", 10);
 const HOST = process.env.HOST ?? "0.0.0.0";
 
-// Set to "true" to buffer the full response before sending.
-const STREAMING_DISABLED = process.env.STREAMING_DISABLED === "true";
-
-const PAGE_CACHE = "public, max-age=3600, s-maxage=31536000, must-revalidate";
+const PAGE_CACHE   = "public, max-age=3600, s-maxage=31536000, must-revalidate";
 const API_NO_CACHE = "no-store";
 
 function isApiPath(url = "") {
   return url.startsWith("/api/");
 }
 
-// Headers added to every response regardless of route
+// Headers applied to every response
 const UNIVERSAL_HEADERS = {
   "X-Powered-By": "Astro on Contentstack Launch",
-  "X-Streaming-Mode": STREAMING_DISABLED ? "buffer" : "stream",
 };
 
-// CDN/surrogate headers only make sense on cacheable page responses,
-// not on API routes (no-store) or SSE streams.
+// CDN cache headers only belong on cacheable page responses
 const PAGE_ONLY_HEADERS = {
   "CDN-Cache-Control": "public, max-age=31536000",
-  "Surrogate-Control":  "max-age=31536000",
+  "Surrogate-Control": "max-age=31536000",
 };
 
-/**
- * Inject Cache-Control and global headers onto res.
- * Cache-Control is always overridden; other headers are set only if absent.
- */
 function injectHeaders(req, res) {
   const isApi = isApiPath(req.url);
   res.setHeader("Cache-Control", isApi ? API_NO_CACHE : PAGE_CACHE);
-  for (const [key, value] of Object.entries(UNIVERSAL_HEADERS)) {
-    if (!res.getHeader(key)) res.setHeader(key, value);
+  for (const [k, v] of Object.entries(UNIVERSAL_HEADERS)) {
+    if (!res.getHeader(k)) res.setHeader(k, v);
   }
   if (!isApi) {
-    for (const [key, value] of Object.entries(PAGE_ONLY_HEADERS)) {
-      if (!res.getHeader(key)) res.setHeader(key, value);
+    for (const [k, v] of Object.entries(PAGE_ONLY_HEADERS)) {
+      if (!res.getHeader(k)) res.setHeader(k, v);
     }
   }
 }
 
-/**
- * Normalise a chunk argument into a Buffer.
- */
 function toBuffer(chunk, encoding) {
   if (!chunk) return null;
   if (Buffer.isBuffer(chunk)) return chunk;
@@ -82,134 +65,76 @@ function toBuffer(chunk, encoding) {
 }
 
 const server = http.createServer((req, res) => {
-  // Disable Nagle's algorithm so each res.write() is flushed to the network
-  // immediately instead of being coalesced into larger TCP segments.
-  // Critical for SSE and any streaming response where low latency matters.
+  // Disable Nagle's algorithm — flush each write() to the network immediately.
+  // Needed for SSE so chunks reach the client without OS-level batching.
   if (req.socket) req.socket.setNoDelay(true);
 
-  if (STREAMING_DISABLED) {
-    // ── Buffer mode ────────────────────────────────────────────────────────
-    // Collect every write() call into an in-memory array.  Once end() fires,
-    // inject headers, set Content-Length, and flush the whole response at once.
-    // This guarantees Cache-Control (and friends) are always present even if
-    // the upstream proxy doesn't forward chunked-transfer headers.
-    //
-    // SSE / EventStream responses are detected at writeHead time and allowed
-    // to pass through without buffering (they are infinite / long-lived).
+  const chunks = [];
+  let capturedStatus = 200;
+  let isSSE = false;
 
-    const chunks = [];
-    let capturedStatus = 200;
-    let isSSE = false;
+  const origWriteHead = res.writeHead.bind(res);
+  const origWrite     = res.write.bind(res);
+  const origEnd       = res.end.bind(res);
 
-    const origWriteHead = res.writeHead.bind(res);
-    const origWrite = res.write.bind(res);
-    const origEnd = res.end.bind(res);
+  res.writeHead = function (status, msgOrHeaders, headersObj) {
+    capturedStatus = status;
 
-    res.writeHead = function (status, msgOrHeaders, headersObj) {
-      capturedStatus = status;
+    // Absorb headers passed as writeHead() args into the setHeader queue.
+    // Node.js gives writeHead-arg headers priority over setHeader values for
+    // the same key; absorbing them first lets injectHeaders() always win.
+    const extra =
+      typeof msgOrHeaders === "object" && msgOrHeaders !== null
+        ? msgOrHeaders
+        : typeof headersObj  === "object" && headersObj  !== null
+        ? headersObj
+        : {};
+    for (const [k, v] of Object.entries(extra)) {
+      if (k.toLowerCase() !== "cache-control") res.setHeader(k, v);
+    }
 
-      // Absorb any headers passed directly to writeHead() — they would normally
-      // override setHeader values, so we move them into the setHeader queue
-      // (except cache-control which we always enforce ourselves).
-      const extra =
-        typeof msgOrHeaders === "object" && msgOrHeaders !== null
-          ? msgOrHeaders
-          : typeof headersObj === "object" && headersObj !== null
-          ? headersObj
-          : {};
-      for (const [k, v] of Object.entries(extra)) {
-        if (k.toLowerCase() !== "cache-control") res.setHeader(k, v);
-      }
-
-      // Detect Server-Sent Events / long-lived streams — can't buffer those.
-      const ct = String(res.getHeader("Content-Type") ?? "");
-      if (ct.includes("text/event-stream")) {
-        isSSE = true;
-        injectHeaders(req, res);
-        origWriteHead(capturedStatus);
-        return res;
-      }
-    };
-
-    res.write = function (chunk, encoding, callback) {
-      // Once SSE mode is detected, pass writes straight through.
-      if (isSSE) return origWrite(chunk, encoding, callback);
-
-      const buf = toBuffer(chunk, encoding);
-      if (buf) chunks.push(buf);
-
-      // Fire the callback (write is always "accepted" in buffer mode).
-      if (typeof encoding === "function") encoding();
-      else if (typeof callback === "function") callback();
-
-      return true;
-    };
-
-    res.end = function (chunk, encoding, callback) {
-      // Normalise callback-only signature: end(cb)
-      if (typeof chunk === "function") {
-        callback = chunk;
-        chunk = null;
-        encoding = null;
-      } else if (typeof encoding === "function") {
-        callback = encoding;
-        encoding = null;
-      }
-
-      // SSE: just pass through as-is.
-      if (isSSE) return origEnd(chunk, encoding, callback);
-
-      const buf = toBuffer(chunk, encoding);
-      if (buf) chunks.push(buf);
-
-      const body = Buffer.concat(chunks);
-
-      // Inject Cache-Control and globals, then set Content-Length and strip
-      // any Transfer-Encoding: chunked that the adapter may have queued.
+    // SSE must always stream — skip buffering for event-stream responses.
+    const ct = String(res.getHeader("Content-Type") ?? "");
+    if (ct.includes("text/event-stream")) {
+      isSSE = true;
       injectHeaders(req, res);
-      res.setHeader("Content-Length", body.length);
-      res.removeHeader("Transfer-Encoding");
-
-      // Now send the full response in one shot.
       origWriteHead(capturedStatus);
-      origEnd(body, callback);
       return res;
-    };
-  } else {
-    // ── Streaming mode ─────────────────────────────────────────────────────
-    // Patch writeHead so headers are injected just before they're flushed.
-    // The response body streams through in chunks without any buffering.
+    }
+  };
 
-    const origWriteHead = res.writeHead.bind(res);
+  res.write = function (chunk, encoding, callback) {
+    if (isSSE) return origWrite(chunk, encoding, callback);
+    const buf = toBuffer(chunk, encoding);
+    if (buf) chunks.push(buf);
+    if (typeof encoding === "function") encoding();
+    else if (typeof callback === "function") callback();
+    return true;
+  };
 
-    res.writeHead = function (statusCode, statusMessageOrHeaders, headersArg) {
-      // Move any headers passed directly to writeHead() into the setHeader queue
-      // (excluding cache-control — we always enforce our own value).
-      // Node.js gives writeHead-arg headers priority over setHeader values for
-      // the same key, so by absorbing them into setHeader first we avoid that.
-      const extra =
-        typeof statusMessageOrHeaders === "object" && statusMessageOrHeaders !== null
-          ? statusMessageOrHeaders
-          : typeof headersArg === "object" && headersArg !== null
-          ? headersArg
-          : {};
-      for (const [k, v] of Object.entries(extra)) {
-        if (k.toLowerCase() !== "cache-control") res.setHeader(k, v);
-      }
+  res.end = function (chunk, encoding, callback) {
+    if (typeof chunk    === "function") { callback = chunk;    chunk = null; encoding = null; }
+    else if (typeof encoding === "function") { callback = encoding; encoding = null; }
 
-      // Inject our Cache-Control (last setHeader wins for the same key).
-      injectHeaders(req, res);
+    if (isSSE) return origEnd(chunk, encoding, callback);
 
-      // Call the real writeHead with NO headers arg so Node.js uses setHeader values only.
-      const msg = typeof statusMessageOrHeaders === "string" ? statusMessageOrHeaders : undefined;
-      return msg ? origWriteHead(statusCode, msg) : origWriteHead(statusCode);
-    };
-  }
+    const buf = toBuffer(chunk, encoding);
+    if (buf) chunks.push(buf);
+
+    const body = Buffer.concat(chunks);
+
+    injectHeaders(req, res);
+    res.setHeader("Content-Length", body.length);
+    res.removeHeader("Transfer-Encoding");
+
+    origWriteHead(capturedStatus);
+    origEnd(body, callback);
+    return res;
+  };
 
   handler(req, res);
 });
 
 server.listen(PORT, HOST, () => {
-  const mode = STREAMING_DISABLED ? "buffer" : "streaming";
-  console.log(`[server] Astro running at http://${HOST}:${PORT} (mode: ${mode})`);
+  console.log(`[server] Astro running at http://${HOST}:${PORT}`);
 });

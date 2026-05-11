@@ -3,11 +3,6 @@ export const prerender = false;
 
 import Layout from "../layouts/Layout.astro";
 import StreamingTester from "../components/StreamingTester.tsx";
-
-// Read server mode at render time and pass it to the client island.
-const serverMode = (import.meta.env.STREAMING_DISABLED === "true" ? "buffer" : "stream") as
-  | "stream"
-  | "buffer";
 ---
 
 <Layout
@@ -26,8 +21,7 @@ const serverMode = (import.meta.env.STREAMING_DISABLED === "true" ? "buffer" : "
       <h1 style="color: #fff; margin-bottom: 1rem;">HTTP Streaming</h1>
       <p style="color: var(--color-text-muted); font-size: 1.05rem; max-width: 68ch;">
         Verifies that HTTP streaming works end-to-end on Contentstack Launch and that
-        <code>Cache-Control</code> headers are preserved regardless of whether the server
-        is running in <strong>streaming</strong> or <strong>buffer</strong> mode.
+        <code>Cache-Control</code> headers are preserved on every response.
       </p>
     </div>
 
@@ -37,22 +31,22 @@ const serverMode = (import.meta.env.STREAMING_DISABLED === "true" ? "buffer" : "
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
         {[
           {
-            icon: "📡",
-            title: "Streaming mode (default)",
-            body: "server.mjs patches res.writeHead to inject Cache-Control just before headers are flushed. The body streams in chunks via Transfer-Encoding: chunked.",
+            icon: "🗄️",
+            title: "Buffered responses",
+            body: "All res.write() calls are collected in memory. When res.end() fires, Cache-Control is injected, Content-Length is set, and the full response is sent in one shot — compatible with the platform toggle ON or OFF.",
             color: "#10b981",
           },
           {
-            icon: "🗄️",
-            title: "Buffer mode (STREAMING_DISABLED=true)",
-            body: "All res.write() calls are collected in memory. When res.end() fires, Cache-Control is injected, Content-Length is set, and the full response is sent in one shot.",
-            color: "#f59e0b",
+            icon: "📡",
+            title: "SSE always streams",
+            body: "server.mjs detects Content-Type: text/event-stream at writeHead time and bypasses buffering automatically — event streams must be live regardless of the platform toggle.",
+            color: "#06b6d4",
           },
           {
-            icon: "🔁",
-            title: "SSE detection",
-            body: "server.mjs checks Content-Type: text/event-stream at writeHead time and bypasses buffering for SSE endpoints — they must stream regardless of mode.",
-            color: "#06b6d4",
+            icon: "🔒",
+            title: "Cache-Control enforced",
+            body: "API routes get no-store. Pages get public, s-maxage=31536000. Headers are injected at the Node.js layer so they apply to static files, SSR pages, and API routes alike.",
+            color: "#7c3aed",
           },
         ].map(item => (
           <div style={`background: rgba(0,0,0,0.25); border-radius: 10px; padding: 1rem; border-left: 3px solid ${item.color};`}>
@@ -70,15 +64,7 @@ const serverMode = (import.meta.env.STREAMING_DISABLED === "true" ? "buffer" : "
         <h2 style="font-size: 1.1rem; color: #fff; margin: 0;">Streaming &amp; Headers Tester</h2>
         <span class="badge badge-island">client:load</span>
       </div>
-      <StreamingTester serverMode={serverMode} client:load />
-    </div>
-
-    <!-- Env var reference -->
-    <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(124,58,237,0.06); border-radius: var(--radius-md); border: 1px solid rgba(124,58,237,0.2); font-size: 0.85rem; color: var(--color-text-muted);">
-      <strong style="color: #fff;">Environment variable:</strong>
-      &nbsp;<code>STREAMING_DISABLED=true</code> switches the server to buffer mode.
-      Current mode detected server-side: <code>{serverMode}</code>.
-      The <code>X-Streaming-Mode</code> response header echoes this on every request.
+      <StreamingTester client:load />
     </div>
 
     <!-- SSE endpoint reference -->
@@ -88,7 +74,6 @@ const serverMode = (import.meta.env.STREAMING_DISABLED === "true" ? "buffer" : "
 export const prerender = false;
 
 export async function GET() &#123;
-  const encoder = new TextEncoder();
   const stream = new ReadableStream(&#123;
     start(controller) &#123;
       // send 5 events × 500 ms apart
@@ -103,9 +88,9 @@ export async function GET() &#123;
 
   return new Response(stream, &#123;
     headers: &#123;
-      "Content-Type": "text/event-stream",
+      "Content-Type": "text/event-stream",  // triggers automatic SSE passthrough
       "Cache-Control": "no-store",
-      "X-Accel-Buffering": "no",   // stop Nginx from buffering
+      "X-Accel-Buffering": "no",
     &#125;,
   &#125;);
 &#125;</code></pre>
