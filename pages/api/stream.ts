@@ -3,6 +3,11 @@ export const prerender = false;
 const TOTAL_CHUNKS = 5;
 const INTERVAL_MS = 500;
 
+// Chrome buffers SSE data until it receives ~1 KB before firing any events.
+// Sending a padding comment first flushes that buffer immediately so the
+// browser starts dispatching events as soon as each chunk arrives.
+const SSE_PADDING = ": " + " ".repeat(1024) + "\n\n";
+
 export async function GET() {
   const encoder = new TextEncoder();
   let timer: ReturnType<typeof setInterval> | null = null;
@@ -14,6 +19,9 @@ export async function GET() {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
         );
+
+      // Flush Chrome's 1 KB SSE buffer before sending real events.
+      controller.enqueue(encoder.encode(SSE_PADDING));
 
       send({ chunk: 0, message: "Stream connected", time: new Date().toISOString() });
 

@@ -35,14 +35,6 @@ const HOST = process.env.HOST ?? "0.0.0.0";
 // Set to "true" to buffer the full response before sending.
 const STREAMING_DISABLED = process.env.STREAMING_DISABLED === "true";
 
-// Headers injected on every response
-const GLOBAL_HEADERS = {
-  "X-Powered-By": "Astro on Contentstack Launch",
-  "X-Streaming-Mode": STREAMING_DISABLED ? "buffer" : "stream",
-  "CDN-Cache-Control": "public, max-age=31536000",
-  "Surrogate-Control": "max-age=31536000",
-};
-
 const PAGE_CACHE = "public, max-age=3600, s-maxage=31536000, must-revalidate";
 const API_NO_CACHE = "no-store";
 
@@ -50,14 +42,33 @@ function isApiPath(url = "") {
   return url.startsWith("/api/");
 }
 
+// Headers added to every response regardless of route
+const UNIVERSAL_HEADERS = {
+  "X-Powered-By": "Astro on Contentstack Launch",
+  "X-Streaming-Mode": STREAMING_DISABLED ? "buffer" : "stream",
+};
+
+// CDN/surrogate headers only make sense on cacheable page responses,
+// not on API routes (no-store) or SSE streams.
+const PAGE_ONLY_HEADERS = {
+  "CDN-Cache-Control": "public, max-age=31536000",
+  "Surrogate-Control":  "max-age=31536000",
+};
+
 /**
  * Inject Cache-Control and global headers onto res.
- * Cache-Control is always overridden; other globals are set only if absent.
+ * Cache-Control is always overridden; other headers are set only if absent.
  */
 function injectHeaders(req, res) {
-  res.setHeader("Cache-Control", isApiPath(req.url) ? API_NO_CACHE : PAGE_CACHE);
-  for (const [key, value] of Object.entries(GLOBAL_HEADERS)) {
+  const isApi = isApiPath(req.url);
+  res.setHeader("Cache-Control", isApi ? API_NO_CACHE : PAGE_CACHE);
+  for (const [key, value] of Object.entries(UNIVERSAL_HEADERS)) {
     if (!res.getHeader(key)) res.setHeader(key, value);
+  }
+  if (!isApi) {
+    for (const [key, value] of Object.entries(PAGE_ONLY_HEADERS)) {
+      if (!res.getHeader(key)) res.setHeader(key, value);
+    }
   }
 }
 
@@ -71,6 +82,11 @@ function toBuffer(chunk, encoding) {
 }
 
 const server = http.createServer((req, res) => {
+  // Disable Nagle's algorithm so each res.write() is flushed to the network
+  // immediately instead of being coalesced into larger TCP segments.
+  // Critical for SSE and any streaming response where low latency matters.
+  if (req.socket) req.socket.setNoDelay(true);
+
   if (STREAMING_DISABLED) {
     // ── Buffer mode ────────────────────────────────────────────────────────
     // Collect every write() call into an in-memory array.  Once end() fires,
