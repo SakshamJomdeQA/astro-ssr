@@ -103,7 +103,7 @@ export default function StreamingTester() {
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [sseStatus, setSseStatus] = useState<StreamStatus>("idle");
   const [verdict, setVerdict] = useState<Verdict>("unknown");
-  const evtSourceRef = useRef<EventSource | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const startTimeRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const chunksRef = useRef<Chunk[]>([]);
@@ -114,69 +114,80 @@ export default function StreamingTester() {
 
   // ── SSE test ───────────────────────────────────────────────────────────
   function resetSSE() {
-    evtSourceRef.current?.close();
+    abortRef.current?.abort();
     setChunks([]);
     setSseStatus("idle");
     setVerdict("unknown");
     chunksRef.current = [];
   }
 
-  function startSSE() {
+  async function startSSE() {
     resetSSE();
     const now = Date.now();
     startTimeRef.current = now;
     lastTimeRef.current = now;
     setSseStatus("connecting");
 
-    const es = new EventSource("/api/stream");
-    evtSourceRef.current = es;
+    const ac = new AbortController();
+    abortRef.current = ac;
 
-    es.onmessage = (event) => {
-      const now = Date.now();
-      const relativeMs = now - startTimeRef.current;
-      const deltaMs = now - lastTimeRef.current;
-      lastTimeRef.current = now;
+    try {
+      const res = await fetch("/api/stream", {
+        headers: { Accept: "text/event-stream" },
+        signal: ac.signal,
+      });
 
-      let parsed: { chunk: number; message: string; time: string; done?: boolean } = {
-        chunk: 0,
-        message: event.data,
-        time: new Date().toISOString(),
-      };
-      try {
-        parsed = JSON.parse(event.data);
-      } catch {}
+      if (!res.ok || !res.body) {
+        setSseStatus("error");
+        return;
+      }
 
-      const chunk: Chunk = {
-        index: parsed.chunk,
-        message: parsed.message,
-        time: parsed.time,
-        relativeMs,
-        deltaMs,
-        done: parsed.done,
-      };
-
-      chunksRef.current = [...chunksRef.current, chunk];
-      setChunks([...chunksRef.current]);
       setSseStatus("streaming");
 
-      if (parsed.done) {
-        es.close();
-        setSseStatus("done");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
 
-        // Verdict: if deltas between chunks are ~500ms → real streaming.
-        // If all arrived within a very short window → proxy buffered them.
-        const deltas = chunksRef.current.slice(1).map((c) => c.deltaMs);
-        if (deltas.length >= 2) {
-          const avg = deltas.reduce((a, b) => a + b, 0) / deltas.length;
-          setVerdict(avg > 200 ? "streaming" : "buffered");
-        }
+      const processLine = (line: string) => {
+        if (!line.startsWith("data: ")) return;
+        try {
+          const parsed: { chunk: number; message: string; time: string; done?: boolean } =
+            JSON.parse(line.slice(6));
+          const ts = Date.now();
+          const chunk: Chunk = {
+            index: parsed.chunk,
+            message: parsed.message,
+            time: parsed.time,
+            relativeMs: ts - startTimeRef.current,
+            deltaMs: ts - lastTimeRef.current,
+            done: parsed.done,
+          };
+          lastTimeRef.current = ts;
+          chunksRef.current = [...chunksRef.current, chunk];
+          setChunks([...chunksRef.current]);
+        } catch {}
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n");
+        buf = parts.pop() ?? "";
+        for (const line of parts) processLine(line.trim());
       }
-    };
+      // flush any remaining data
+      if (buf.trim()) processLine(buf.trim());
 
-    es.onerror = () => {
-      es.close();
-      setSseStatus((s) => (s === "connecting" ? "error" : "done"));
-    };
+      setSseStatus("done");
+      const deltas = chunksRef.current.slice(1).map((c) => c.deltaMs);
+      if (deltas.length >= 2) {
+        const avg = deltas.reduce((a, b) => a + b, 0) / deltas.length;
+        setVerdict(avg > 200 ? "streaming" : "buffered");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== "AbortError") setSseStatus("error");
+    }
   }
 
   // ── Headers inspector ──────────────────────────────────────────────────
